@@ -3,7 +3,6 @@ from colorama import init, Fore, Style
 import os
 import sys
 import time
-import datetime
 
 init(autoreset=True)
 
@@ -20,12 +19,13 @@ def msg():
                                                                         
 """)
 
+
 garis = "×" * 20
 garis2 = "•" * 27
 
 
 def msg2():
-    print(f"{Fore.CYAN+Style.BRIGHT} {garis2}\n By : 0xYoungz\n {garis2}\n auto claim ✅\n auto clear tasks ✅\n {garis2}")
+    print(f"{Fore.CYAN + Style.BRIGHT} {garis2}\n By : 0xYoungz\n {garis2}\n auto claim ✅\n auto clear tasks ✅\n {garis2}")
 
 
 # URLs
@@ -53,6 +53,7 @@ headers = {
     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
 }
 
+
 def load_credentials():
     # Read tokens from file and return as a list
     try:
@@ -66,26 +67,29 @@ def load_credentials():
         print("Terjadi kesalahan saat memuat token:", str(e))
         return []
 
+
 def get_profile():
     response = requests.get(url_get_profile, headers=headers)
     if response.status_code == 200:
         data_profil = response.json()
         name = data_profil['data']['name']
-        print(f"{Fore.GREEN+Style.BRIGHT}{garis} Login Akun : {name} {garis}\n")
+        print(f"{Fore.GREEN + Style.BRIGHT}{garis} Login Akun : {name} {garis}\n")
         return data_profil
     else:
-        print(f"{Fore.RED+Style.BRIGHT}Failed to get profile : {response.status_code}")
+        print(f"{Fore.RED + Style.BRIGHT}Failed to get profile : {response.status_code}")
         return None
+
 
 def balance():
     response = requests.get(url_balance, headers=headers)
     if response.status_code == 200:
         data_balance = response.json()
-        print(f"{Fore.YELLOW+Style.BRIGHT}Akun Balance : {data_balance['data'] / 1000000000}")
+        print(f"{Fore.YELLOW + Style.BRIGHT}Akun Balance : {data_balance['data'] / 1000000000}")
         return True
     else:
-        print(f"{Fore.RED+Style.BRIGHT}Error : {response.json()}")
+        print(f"{Fore.RED + Style.BRIGHT}Error : {response.json()}")
         return False
+
 
 def bonus_login():
     response = requests.get(url_bonus, headers=headers)
@@ -93,7 +97,7 @@ def bonus_login():
         data = response.json()
         if isinstance(data.get('data'), list) and data['data']:
             day = data['data'][0].get('no', '')
-            print(f"{Fore.CYAN+Style.BRIGHT}claim bonus daily : Berhasil claim | day {day}")
+            print(f"{Fore.CYAN + Style.BRIGHT}claim bonus daily : Berhasil claim | day {day}")
         else:
             print("Data format not expected")
     else:
@@ -103,68 +107,78 @@ def bonus_login():
         else:
             print(f"Gagal claim : {data}")
 
+
 def tugas():
     response = requests.get('https://elb.seeddao.org/api/v1/tasks/progresses', headers=headers)
     tasks = response.json()['data']
-    
+
     for task in tasks:
         if task['task_user'] is None or not task['task_user']['completed']:
             complete_task(task['id'], task['name'])
 
+
 def complete_task(task_id, task_name):
     response = requests.post(f'https://elb.seeddao.org/api/v1/tasks/{task_id}', headers=headers)
     if response.status_code == 200:
-        print(f"{Fore.GREEN+Style.BRIGHT}Tugas : {task_name} berhasil..")
+        print(f"{Fore.GREEN + Style.BRIGHT}Tugas : {task_name} berhasil..")
     else:
         print(f"Failed : Gagal Menyelesaikan Tugas {task_name} | code | {response.status_code}")
 
 
-def countdown_timer(seconds):
-    animation = "....."
+def countdown_timer(seconds, message="Tunggu"):
+    animation = "|/-\\"
     for i in range(seconds, 0, -1):
-        sys.stdout.write(f"\r{Fore.YELLOW+Style.BRIGHT}Done. Tunggu {i} detik {animation[:i % len(animation)]}   ")
+        hours, remainder = divmod(i, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        sys.stdout.write(f"\r{Fore.YELLOW + Style.BRIGHT}{message} {hours:02}:{minutes:02}:{seconds:02} {animation[i % len(animation)]}   ")
         sys.stdout.flush()
         time.sleep(1)
-    sys.stdout.write("\r" + " " * 50)
+    sys.stdout.write("\r" + " " * 50 + "\n")
 
 
 def main():
     tokens = load_credentials()
-    
+
     confirm_tugas = input("Ingin Auto Clear Taks (y/n) : ")
-    
-    
+
     os.system('clear')
     msg()
     msg2()
-    
+
     while True:
-        
+        all_accounts_processed = True
+
         for index, token in enumerate(tokens):
             headers['telegram-data'] = token
             info = get_profile()
             if info:
-                print(f"{Fore.GREEN+Style.BRIGHT}Memuat akun {info['data']['name']}")
-                
+                print(f"{Fore.GREEN + Style.BRIGHT}Memuat akun {info['data']['name']}")
+
             if balance():
                 response = requests.post(url_claim, headers=headers)
-                
+
                 if response.status_code == 200:
                     print(f"Claim : Berhasil claim mining..")
                 elif response.status_code == 400:
                     response_data = response.json()
-                    print(f"{Fore.MAGENTA+Style.BRIGHT}Claim : Belum waktunya claim!!")
+                    print(f"{Fore.MAGENTA + Style.BRIGHT}Claim : Belum waktunya claim!!")
                 else:
                     print(f"[-] Error | code | {response.status_code}")
-                
+
                 bonus_login()
-                
+
                 if confirm_tugas.lower() == 'y':
                     tugas()
-                
-                
-                countdown_timer(30)
+
                 print()
+            else:
+                all_accounts_processed = False
+
+        if all_accounts_processed:
+            print(f"{Fore.BLUE + Style.BRIGHT}{garis2}\nSemua akun sudah diproses..")
+            countdown_timer(7200, "Menunggu Claim Berikutnya | ")
+        else:
+            countdown_timer(30, "Menunggu")
 
 if __name__ == "__main__":
     main()
